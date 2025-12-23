@@ -1,0 +1,96 @@
+model:
+  swinir:
+    target: model.swinir.SwinIR
+    params:
+      img_size: 64
+      patch_size: 1
+      in_chans: 1
+      embed_dim: 180
+      depths: [6, 6, 6, 6, 6, 6, 6, 6]
+      num_heads: [6, 6, 6, 6, 6, 6, 6, 6]
+      window_size: 8
+      mlp_ratio: 2
+      sf: 4
+      img_range: 1.0
+      upsampler: "nearest+conv"
+      resi_connection: "1conv"
+      unshuffle: True
+      unshuffle_scale: 4
+  unet_l:
+    target: model.unet_lesion.UNetGenerator
+    params:
+      norm: 'in'
+      padding: 'reflect'
+      n_blocks: 1
+      n_filters: 64
+      output_nc: 1
+      lesion_output_nc: 1
+      n_downs: 4
+      input_nc: 1
+
+dataset:
+  train:
+    target: dataset.codeformer.CodeformerDataset
+    # target: dataset.codeformer_mrart.CodeformerDataset
+    params:
+      # training file list pathju
+      # gt_file_list: dataset/main_img.txt
+      # lq_file_list: dataset/degrade_img.txt
+      gt_file: /data1/baihy/denoise/data/IXI-new/Gt-norm-slice/train
+      frq_file: /data1/baihy/denoise/data/IXI-new/Gt-norm-energy-slice/train
+      lq_file: /data1/baihy/denoise/data/IXI-new/Degrade-norm-slice/train
+      # gt_file: /data1/baihy/denoise/data/MR-ART/standard_slice/train
+      # lq_file: /data1/baihy/denoise/data/MR-ART/headmotion_slice/train
+      # frq_file: /data1/baihy/denoise/data/MR-ART/standard_sliced_Energy/train
+      file_backend_cfg:
+        target: dataset.file_backend.HardDiskBackend
+      # out_size_x: 144
+      # out_size_y: 256
+      crop_type: none
+      blur_kernel_size: 41
+      kernel_list: ['iso', 'aniso']
+      kernel_prob: [0.5, 0.5]
+      blur_sigma: [0.1, 12]
+      downsample_range: [1, 12]
+      noise_range: [0, 15]
+      jpeg_range: [30, 100]
+  val:
+    target: dataset.codeformer.CodeformerDataset
+    # target: dataset.codeformer_mrart.CodeformerDataset
+    params:
+      # validation file list path
+      # gt_file_list: 
+      # lq_file_list:
+      # gt_file: /data1/baihy/denoise/data/MR-ART/standard_slice/val
+      # frq_file: /data1/baihy/denoise/data/MR-ART/standard_sliced_Energy/val
+      # lq_file: /data1/baihy/denoise/data/MR-ART/headmotion_slice/val
+      gt_file: /data1/baihy/denoise/data/IXI-new/Gt-norm-slice/val
+      frq_file: /data1/baihy/denoise/data/IXI-new/Gt-norm-energy-slice/val
+      lq_file: /data1/baihy/denoise/data/IXI-new/Degrade-norm-slice/val
+      file_backend_cfg:
+        target: dataset.file_backend.HardDiskBackend
+      # out_size_x: 144
+      # out_size_y: 256
+      crop_type: none
+      blur_kernel_size: 41
+      kernel_list: ['iso', 'aniso']
+      kernel_prob: [0.5, 0.5]
+      blur_sigma: [0.1, 12]
+      downsample_range: [1, 12]
+      noise_range: [0, 15]
+      jpeg_range: [30, 100]
+
+train:
+  # experiment directory path
+  exp_dir: unet_ixi
+  learning_rate: 1e-4
+  # total batch size
+  batch_size: 256
+  num_workers: 8
+  train_steps: 150000
+  log_every: 50
+  ckpt_every: 500
+  image_every: 50
+  val_every: 500
+  # resume: /data1/baihy/tools/DiffBIR/swinir_ANDI_ssimloss/first/0001500.pt
+  resume: ~

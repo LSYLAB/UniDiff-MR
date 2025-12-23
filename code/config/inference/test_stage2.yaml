@@ -1,0 +1,172 @@
+model:
+  cldm:
+    target: model.cldmtrain_sg1.ControlLDM
+    params:
+      latent_scale_factor: 0.18215
+      unet_cfg:
+        use_checkpoint: True
+        image_size: 32 # unused
+        in_channels: 4
+        out_channels: 4
+        model_channels: 320
+        attention_resolutions: [ 4, 2, 1 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_head_channels: 64 # need to fix for flash-attn
+        use_spatial_transformer: True
+        use_linear_in_transformer: True
+        transformer_depth: 1
+        context_dim: 1024
+        legacy: False
+      vae_cfg:
+        embed_dim: 4
+        ddconfig:
+          double_z: true
+          z_channels: 4
+          resolution: 256
+          in_channels: 1
+          out_ch: 1
+          ch: 128
+          ch_mult:
+          - 1
+          - 2
+          - 4
+          - 4
+          num_res_blocks: 2
+          attn_resolutions: []
+          dropout: 0.0
+      clip_cfg:
+        embed_dim: 1024
+        vision_cfg:
+          image_size: 224
+          layers: 32
+          width: 1280
+          head_width: 80
+          patch_size: 14
+        text_cfg:
+          context_length: 77
+          vocab_size: 49408
+          width: 1024
+          heads: 16
+          layers: 24
+        layer: "penultimate"
+      controlnet_cfg:
+        use_checkpoint: True
+        image_size: 32 # unused
+        in_channels: 4
+        hint_channels: 4
+        model_channels: 320
+        attention_resolutions: [ 4, 2, 1 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_head_channels: 64 # need to fix for flash-attn
+        use_spatial_transformer: True
+        use_linear_in_transformer: True
+        transformer_depth: 1
+        context_dim: 1024
+        legacy: False
+
+  swinir:
+    target: model.swinir.SwinIR
+    params:
+      img_size: 64
+      patch_size: 1
+      in_chans: 1
+      embed_dim: 180
+      depths: [6, 6, 6, 6, 6, 6, 6, 6]
+      num_heads: [6, 6, 6, 6, 6, 6, 6, 6]
+      window_size: 8
+      mlp_ratio: 2
+      sf: 4
+      img_range: 1.0
+      upsampler: "nearest+conv"
+      resi_connection: "1conv"
+      unshuffle: True
+      unshuffle_scale: 4
+
+  diffusion:
+    target: model.gaussian_diffusion.Diffusion
+    params:
+      linear_start: 0.00085
+      linear_end: 0.0120
+      timesteps: 1000
+
+dataset:
+  train:
+    target: dataset.codeformer_test.CodeformerDataset
+    params:
+      # training file list path
+      gt_file: /data1/baihy/denoise/data/IXI-T1-HH-Main/train
+      grad_file: /data1/baihy/tools/DiffBIR/results/ADNI/stage1/test_gradients
+      lq_file: /data1/baihy/denoise/data/IXI-T1-HH-Degraded/train
+      # file_backend_cfg:
+        # target: dataset.file_backend.HardDiskBackend
+      # out_size: 512
+      crop_type: center
+      blur_kernel_size: 41
+      kernel_list: ['iso', 'aniso']
+      kernel_prob: [0.5, 0.5]
+      blur_sigma: [0.1, 12]
+      downsample_range: [1, 12]
+      noise_range: [0, 15]
+      jpeg_range: [30, 100]
+
+  val:
+    target: dataset.codeformer_test.CodeformerDataset
+    params:
+      # validation file list path
+      # gt_file_list: 
+      # lq_file_list:
+      # gt_file: /data1/baihy/denoise/data/IXI-T1-HH-Main-norm-slice/test
+      # lq_file: /data1/baihy/denoise/data/IXI-T1-HH-Degraded-norm-slice/test
+      gt_file: /data1/baihy/denoise/data/ANDI/Gt_fsl_norm/test
+      grad_file: /data1/baihy/tools/DiffBIR/results/ADNI/stage1/test_gradients
+      # lq_file: /data1/baihy/denoise/data/ANDI/Degrade_fsl_norm/test
+      lq_file: /data1/baihy/tools/DiffBIR/results/ADNI/stage1/test_combined
+      # lq_file: /data1/baihy/denoise/data/IXI-T1-HH-ISECRET/val/degrade_good
+      # file_backend_cfg:
+        # target: dataset.file_backend.HardDiskBackend
+      # out_size: 512
+      crop_type: center
+      blur_kernel_size: 41
+      kernel_list: ['iso', 'aniso']
+      kernel_prob: [0.5, 0.5]
+      blur_sigma: [0.1, 12]
+      downsample_range: [1, 12]
+      noise_range: [0, 15]
+      jpeg_range: [30, 100]
+
+train:
+  # pretrained sd v2.1 path
+  # sd_path: /data1/baihy/tools/DiffBIR/experiment_vae/jpg/checkpoints/new/0060000.pt
+  sd_path: /data1/baihy/denoise/InverseSR/experiment-stage2/checkpoints/0012000.pt
+  # sd_path: /data1/baihy/tools/DiffBIR/weights/v2-1_512-ema-pruned.ckpt
+  # experiment directory path
+  exp_dir: /data1/baihy/denoise/InverseSR/experiment-test-nccloss
+  # stage 1 swinir path
+  swinir_path: /data1/baihy/tools/DiffBIR/stage1/checkpoints/0100000.pt
+  learning_rate: 1e-4
+  # ImageNet 1k (1.3M images)
+  # batch size = 192, lr = 1e-4, total training steps = 25k
+  # Our filtered laion2b-en (15M images)
+  # batch size = 256, lr = 1e-4 (first 30k), 1e-5 (next 50k), total training steps = 80k
+  batch_size: 1
+  num_workers: 1
+  train_steps: 600000
+  log_every: 50
+  ckpt_every: 500
+  image_every: 500
+  val_every: 500
+  # resume: /data1/baihy/tools/DiffBIR/experiment/checkpoints/0005000.pt
+  resume: /data1/baihy/denoise/InverseSR/condwithgrad_continue1/checkpoints/0006000_controlnet.pt
+  cond_resume: /data1/baihy/denoise/InverseSR/condpretrain/checkpoints/0018500.pt
+  
+test:
+  guidance:
+    or_not: true
+    g_loss: 'ncc'
+    g_scale: 1
+    g_start: 151
+    g_stop: -1
+    g_space: rgb
+    g_repeat: 1
